@@ -1,0 +1,26 @@
+﻿  Creating proxy/bridge routines
+  Arrays.cpp
+  Functions.cpp
+  Pointers.cpp
+  Types.cpp
+  Enclave.cpp
+  Libc.cpp
+  Libcxx.cpp
+  Thread.cpp
+  Generating Code...
+  Enclave_t.c
+     Creating library C:\Users\nagabe\Desktop\SampleEnclave\x64\Debug\Enclave.lib and object C:\Users\nagabe\Desktop\SampleEnclave\x64\Debug\Enclave.exp
+  Enclave.vcxproj -> C:\Users\nagabe\Desktop\SampleEnclave\x64\Debug\Enclave.dll
+  The required memory is 0x427000.
+  Succeed.
+  <EnclaveConfiguration>
+      <ProdID>0</ProdID>
+      <ISVSVN>0</ISVSVN>
+      <StackMaxSize>0x40000</StackMaxSize>
+      <HeapMaxSize>0x100000</HeapMaxSize>
+      <TCSNum>10</TCSNum>
+      <TCSPolicy>1</TCSPolicy>
+      <DisableDebug>0</DisableDebug>
+      <MiscSelect>0</MiscSelect>
+      <MiscMask>0xFFFFFFFF</MiscMask>
+  </EnclaveConfiguration>

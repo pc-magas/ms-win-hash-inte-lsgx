@@ -1,0 +1,12 @@
+﻿  Creating untrusted proxy/bridge routines
+  Thread.cpp
+  Libcxx.cpp
+  Libc.cpp
+  Types.cpp
+  Pointers.cpp
+  Functions.cpp
+  Arrays.cpp
+  App.cpp
+  Generating Code...
+  Enclave_u.c
+  App.vcxproj -> C:\Users\nagabe\Desktop\SampleEnclave\Debug\App.exe
