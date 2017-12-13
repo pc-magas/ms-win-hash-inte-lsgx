@@ -52,18 +52,39 @@ void ecall_sgx_cpuid(int cpuinfo[4], int leaf)
 		abort();
 }
 
-void ecall_sgx_sha256_msg(const uint8_t *p_src,
-	uint32_t src_len,
-	uint8_t p_hash[32])
+void ecall_sgx_sha256_msg(const uint8_t *p_src, uint32_t src_len)
 {
-	//sgx_sha256_hash_t* p_hash = new sgx_sha256_hash_t[256];
-	//const uint8_t* p_src = (const uint8_t *)"gamo ti mana sou";
-	//uint32_t src_len = { 1 };
-	
+
+	printf("AAAAAAAAAAAAAAAAA\n");
 	sgx_sha256_hash_t *result = new sgx_sha256_hash_t[32];
 
 	sgx_status_t ret = sgx_sha256_msg(p_src, src_len, result);
 	if (ret != SGX_SUCCESS)
 		abort();
-	
+
+
+	printf("----------------------------Hash Result as %s: ----------------------------\n");
+	printf((char *)result[0]);
+	printf("\n");
+	printf("----------------------------End of Result as %s: ----------------------------\n");
+
+
+
+	printf("----------------------------Hash Result as char array: ----------------------------\n");
+	printf((char *)result);
+	printf("\n");
+	printf("----------------------------End of Hash Result as char array: ----------------------------\n");
+	printf("BBBBBBBBBBBBBBBBB\n");
+
+
+
+	printf("----------------------------Hash Result as hex array: ----------------------------\n");
+	for (int i = 0; i < 32; i++) {
+		printf("%#x, ", (int)&result[i]);
+	}
+	printf("\n");
+	printf("----------------------------End of Hash Result as hex array: ----------------------------\n");
+
 }
+
+

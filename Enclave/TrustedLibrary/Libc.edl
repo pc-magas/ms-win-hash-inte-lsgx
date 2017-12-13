@@ -20,6 +20,6 @@ enclave {
          */
         public void ecall_sgx_cpuid([out] int cpuinfo[4], int leaf);
 
-		public void ecall_sgx_sha256_msg([in] const uint8_t *p_src, uint32_t src_len, [out] uint8_t *p_hash);
+		public void ecall_sgx_sha256_msg([in] const uint8_t *p_src, uint32_t src_len);
     };
 };

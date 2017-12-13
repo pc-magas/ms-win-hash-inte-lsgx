@@ -37,10 +37,13 @@ void ecall_libc_functions(void)
 
 	uint32_t bufferlength = (uint32_t)256;
 	//sgx_sha256_hash_t* p_hash = new sgx_sha256_hash_t[bufferlength];
-	const uint8_t* p_src = (const uint8_t *)"message hash 1";
+	const uint8_t *p_src = (const uint8_t *)"message hash 1";
 	uint8_t *p_hash = new uint8_t[32];
-	uint32_t src_len = { 1 };
-	ret = ecall_sgx_sha256_msg(global_eid, p_src, 256, p_hash);
+	uint32_t src_len = { 14 };
+	
+	//printf((char *)p_src);
+
+	ret = ecall_sgx_sha256_msg(global_eid, p_src, 256);
 	if (ret != SGX_SUCCESS)
 		abort();
 
@@ -49,19 +52,4 @@ void ecall_libc_functions(void)
 
 	s.assign(p_hash, p_hash + sizeof(p_hash));
 
-	printf("1");
-	printf("%s\n", p_hash);
-	printf("3");
-
-	/*if ((p_src, src_len, p_hash) > 0) {
-		printf("peos ...\n");
-		getchar();
-		return -1;
-	}
-	else if (sgx_sha256_msg(p_src, src_len, p_hash) > 0) {
-
-		printf("peos 1...\n");
-		getchar();
-		return -1;
-	}*/
 }
