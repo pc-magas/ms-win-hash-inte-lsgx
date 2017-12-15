@@ -103,16 +103,14 @@ typedef struct ms_ecall_function_private_t {
 	int ms_retval;
 } ms_ecall_function_private_t;
 
-typedef struct ms_ecall_sgx_cpuid_t {
-	int* ms_cpuinfo;
-	int ms_leaf;
-} ms_ecall_sgx_cpuid_t;
+typedef struct ms_store_secret_t {
+	char* ms_msg;
+} ms_store_secret_t;
 
-typedef struct ms_ecall_sgx_sha256_msg_t {
-	uint8_t* ms_p_src;
-	uint32_t ms_src_len;
-	uint8_t* ms_p_hash;
-} ms_ecall_sgx_sha256_msg_t;
+typedef struct ms_print_hash_t {
+	int ms_retval;
+	sgx_status_t* ms_error;
+} ms_print_hash_t;
 
 typedef struct ms_ecall_increase_counter_t {
 	size_t ms_retval;
@@ -145,6 +143,14 @@ typedef struct ms_memccpy_t {
 	int ms_val;
 	size_t ms_len;
 } ms_memccpy_t;
+
+typedef struct ms_o_print_hash_t {
+	unsigned char* ms_hash;
+} ms_o_print_hash_t;
+
+typedef struct ms_ocall_print_secret_t {
+	char* ms_str;
+} ms_ocall_print_secret_t;
 
 typedef struct ms_sgx_oc_cpuidex_t {
 	int* ms_cpuinfo;
@@ -229,6 +235,22 @@ static sgx_status_t SGX_CDECL Enclave_ocall_function_allow(void* pms)
 	return SGX_SUCCESS;
 }
 
+static sgx_status_t SGX_CDECL Enclave_o_print_hash(void* pms)
+{
+	ms_o_print_hash_t* ms = SGX_CAST(ms_o_print_hash_t*, pms);
+	o_print_hash(ms->ms_hash);
+
+	return SGX_SUCCESS;
+}
+
+static sgx_status_t SGX_CDECL Enclave_ocall_print_secret(void* pms)
+{
+	ms_ocall_print_secret_t* ms = SGX_CAST(ms_ocall_print_secret_t*, pms);
+	ocall_print_secret((const char*)ms->ms_str);
+
+	return SGX_SUCCESS;
+}
+
 static sgx_status_t SGX_CDECL Enclave_sgx_oc_cpuidex(void* pms)
 {
 	ms_sgx_oc_cpuidex_t* ms = SGX_CAST(ms_sgx_oc_cpuidex_t*, pms);
@@ -271,9 +293,9 @@ static sgx_status_t SGX_CDECL Enclave_sgx_thread_set_multiple_untrusted_events_o
 
 static const struct {
 	size_t nr_ocall;
-	void * func_addr[12];
+	void * func_addr[14];
 } ocall_table_Enclave = {
-	12,
+	14,
 	{
 		(void*)(uintptr_t)Enclave_ocall_print_string,
 		(void*)(uintptr_t)Enclave_ocall_pointer_user_check,
@@ -282,6 +304,8 @@ static const struct {
 		(void*)(uintptr_t)Enclave_ocall_pointer_in_out,
 		(void*)(uintptr_t)Enclave_memccpy,
 		(void*)(uintptr_t)Enclave_ocall_function_allow,
+		(void*)(uintptr_t)Enclave_o_print_hash,
+		(void*)(uintptr_t)Enclave_ocall_print_secret,
 		(void*)(uintptr_t)Enclave_sgx_oc_cpuidex,
 		(void*)(uintptr_t)Enclave_sgx_thread_wait_untrusted_event_ocall,
 		(void*)(uintptr_t)Enclave_sgx_thread_set_untrusted_event_ocall,
@@ -533,31 +557,29 @@ sgx_status_t ecall_function_private(sgx_enclave_id_t eid, int* retval)
 	return status;
 }
 
-sgx_status_t ecall_malloc_free(sgx_enclave_id_t eid)
+sgx_status_t store_secret(sgx_enclave_id_t eid, char* msg)
 {
 	sgx_status_t status;
-	status = sgx_ecall(eid, 27, &ocall_table_Enclave, NULL);
+	ms_store_secret_t ms;
+	ms.ms_msg = msg;
+	status = sgx_ecall(eid, 27, &ocall_table_Enclave, &ms);
 	return status;
 }
 
-sgx_status_t ecall_sgx_cpuid(sgx_enclave_id_t eid, int cpuinfo[4], int leaf)
+sgx_status_t print_hash(sgx_enclave_id_t eid, int* retval, sgx_status_t* error)
 {
 	sgx_status_t status;
-	ms_ecall_sgx_cpuid_t ms;
-	ms.ms_cpuinfo = (int*)cpuinfo;
-	ms.ms_leaf = leaf;
+	ms_print_hash_t ms;
+	ms.ms_error = error;
 	status = sgx_ecall(eid, 28, &ocall_table_Enclave, &ms);
+	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
 
-sgx_status_t ecall_sgx_sha256_msg(sgx_enclave_id_t eid, const uint8_t* p_src, uint32_t src_len, uint8_t* p_hash)
+sgx_status_t get_secret(sgx_enclave_id_t eid)
 {
 	sgx_status_t status;
-	ms_ecall_sgx_sha256_msg_t ms;
-	ms.ms_p_src = (uint8_t*)p_src;
-	ms.ms_src_len = src_len;
-	ms.ms_p_hash = p_hash;
-	status = sgx_ecall(eid, 29, &ocall_table_Enclave, &ms);
+	status = sgx_ecall(eid, 29, &ocall_table_Enclave, NULL);
 	return status;
 }
 

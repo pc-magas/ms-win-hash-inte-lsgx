@@ -325,50 +325,86 @@ int query_sgx_status()
 }
 #endif
 
-/* Application entry */
-int SGX_CDECL main(int argc, char *argv[])
+#include <stdio.h>
+#include <stdlib.h>
+#include <Windows.h>
+#include <sgx_urts.h>
+#include "Enclave_u.h"
+#include "sgx_capable.h"
+
+#define ENCLAVE_PATH L"Enclave.signed.dll"
+#define MAX_MSG_LEN 65536
+
+#pragma comment (lib, "sgx_capable")
+
+void Exit(int);
+
+int main()
 {
-	(void)(argc);
-	(void)(argv);
+	char msg[MAX_MSG_LEN] = { 0 };
+	char out[MAX_MSG_LEN] = { 0 };
+	sgx_launch_token_t token = { 0 };
+	sgx_status_t status, enclave_error;
+	sgx_enclave_id_t eid = 0;
+	int updated = 0;
+	int rv;
+	int iSGXCapable = 0;
 
-#if defined(_MSC_VER)
-	if (query_sgx_status() < 0) {
-		/* either SGX is disabled, or a reboot is required to enable SGX */
-		printf("Enter a character before exit ...\n");
-		getchar();
-		return -1;
-	}
-#endif 
+	sgx_is_capable(&iSGXCapable);
+	//if (iSGXCapable == 0) { MessageBox(0, L"sgx_is_capable == FALSE", L"", 0); Exit(0); }
 
-	/* Initialize the enclave */
-	if (initialize_enclave() < 0) {
-		printf("Enter a character before exit ...\n");
-		getchar();
-		return -1;
-	}
+	status = sgx_create_enclavew(ENCLAVE_PATH, SGX_DEBUG_FLAG, &token, &updated, &eid, 0);
+	if (status != SGX_SUCCESS) { fprintf(stderr, "sgx_create_enclave: 0x%08x\n", status); Exit(1); }
 
-	/* Utilize edger8r attributes */
-	edger8r_array_attributes();
-	edger8r_pointer_attributes();
-	edger8r_type_attributes();
-	edger8r_function_attributes();
+	strncpy_s(msg, "password", 80);
 
-	/* Utilize trusted libraries */
-	ecall_libc_functions();
-	ecall_libcxx_functions();
-	ecall_thread_functions();
-	/////
-	//naim's code
-	/*sgx_sha_state_handle_t sha_handle = new sgx_sha_state_handle_t();*/
-	
-	//////
-	/* Destroy the enclave */
-	sgx_destroy_enclave(global_eid);
+	status = store_secret(eid, msg);
 
-	printf("Info: SampleEnclave successfully returned.\n");
+	/* Delete the secret from untrusted memory right away */
+	SecureZeroMemory(msg, MAX_MSG_LEN);
 
-	printf("Enter a character before exit ...\n");
-	getchar();
-	return 0;
+	if (status != SGX_SUCCESS) { fprintf(stderr, "ECALL: store_secret: 0x%08x\n", status); Exit(1); }
+
+	ocall_print_secret(out);
+
+	status = print_hash(eid, &rv, &enclave_error);
+	if (status != SGX_SUCCESS) { fprintf(stderr, "ECALL: print_hash: 0x%08x\n", status); Exit(1); }
+
+	// Now check the return value of the function executed in the ECALL
+	if (rv == -1) { fprintf(stderr, "Couldn't calculate hash: 0x%08x\n", enclave_error); Exit(1); }
+	else if (rv == -2) { fprintf(stderr, "OCALL: o_print_hash: 0x%08x\n", enclave_error); Exit(1); }
+
+
+	Exit(0);
 }
+
+void ocall_print_secret(const char *str)
+{
+	printf("%s", str);
+}
+
+void o_print_hash(unsigned char hash[32])
+{
+	int i;
+
+	printf("\nSHA-256 hash of your secret (including the newline) is:\n");
+	for (i = 0; i < 32; ++i) printf("%02x", hash[i]);
+	printf("\n\n");
+	puts(
+		"Verify this hash by entering your secret in an online SHA256\n"
+		"calculator such as:\n\n"
+		"  http://passwordsgenerator.net/sha256-hash-generator/\n"
+		"  http://www.xorbin.com/tools/sha256-hash-calculator\n"
+		"\n(Don't forget to include the trailing newline!)"
+	);
+}
+
+void Exit(int code)
+{
+	printf("Press ENTER to exit...\n");
+	fflush(stdout);
+	getchar();
+	exit(code);
+}
+
 

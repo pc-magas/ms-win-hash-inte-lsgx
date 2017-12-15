@@ -1,12 +1,2 @@
-﻿  Creating untrusted proxy/bridge routines
-  Thread.cpp
-  Libcxx.cpp
-  Libc.cpp
-  Types.cpp
-  Pointers.cpp
-  Functions.cpp
-  Arrays.cpp
-  App.cpp
-  Generating Code...
-  Enclave_u.c
-  App.vcxproj -> C:\Work\Xenakis\SampleEnclave\Simulation\App.exe
+﻿  App.cpp
+  App.vcxproj -> C:\Work\XenakisFinal\Simulation\App.exe

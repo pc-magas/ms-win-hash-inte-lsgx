@@ -30,6 +30,7 @@
 #include "sgx_trts.h"
 #include "../Enclave.h"
 #include "Enclave_t.h"
+#define MAX_MSG_LEN 65536
 
  /* ecall_malloc_free:
   *   Uses malloc/free to allocate/free trusted memory.
@@ -87,4 +88,27 @@ void ecall_sgx_sha256_msg(const uint8_t *p_src, uint32_t src_len)
 
 }
 
+char secret[MAX_MSG_LEN];
 
+void store_secret(char *s)
+{
+	strncpy(secret, s, 80);
+}
+
+void get_secret()
+{
+	ocall_print_secret(secret);
+}
+
+int print_hash(sgx_status_t *error)
+{
+	sgx_sha256_hash_t hash;
+
+	*error = sgx_sha256_msg((uint8_t *)secret, (uint32_t)strlen(secret), &hash);
+	if (*error != SGX_SUCCESS) return -1;
+
+	*error = o_print_hash((unsigned char *)hash);
+	if (*error != SGX_SUCCESS) return -2;
+
+	return 0;
+}

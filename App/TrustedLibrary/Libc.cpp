@@ -27,29 +27,97 @@
 #include "Enclave_u.h"
 #include <sgx_tcrypto.h>
 #include <string>
-
- /* ecall_libc_functions:
-  *   Invokes standard C functions.
-  */
-void ecall_libc_functions(void)
-{
-	sgx_status_t ret = SGX_ERROR_UNEXPECTED;
-
-	uint32_t bufferlength = (uint32_t)256;
-	//sgx_sha256_hash_t* p_hash = new sgx_sha256_hash_t[bufferlength];
-	const uint8_t *p_src = (const uint8_t *)"message hash 1";
-	uint8_t *p_hash = new uint8_t[32];
-	uint32_t src_len = { 14 };
-	
-	//printf((char *)p_src);
-
-	ret = ecall_sgx_sha256_msg(global_eid, p_src, 256);
-	if (ret != SGX_SUCCESS)
-		abort();
+#include "sgx_urts.h"
+#include "sgx_capable.h"
+#define MAX_MSG_LEN 65536
 
 
-	std::string s;
+#define ENCLAVE_PATH L"Enclave.signed.dll"
 
-	s.assign(p_hash, p_hash + sizeof(p_hash));
+#pragma comment (lib, "sgx_capable")
 
-}
+#include <stdio.h>
+#include <stdlib.h>
+#include <Windows.h>
+#include <sgx_urts.h>
+#include "Enclave_u.h"
+#include "sgx_capable.h"
+
+
+
+//void Exit(int code);
+/* ecall_libc_functions:
+ *   Invokes standard C functions.
+ */
+//void ecall_libc_functions(void)
+//{
+//	//sgx_status_t ret = SGX_ERROR_UNEXPECTED;
+//
+//	//uint32_t bufferlength = (uint32_t)256;
+//	////sgx_sha256_hash_t* p_hash = new sgx_sha256_hash_t[bufferlength];
+//	//const uint8_t *p_src = (const uint8_t *)"message hash 1";
+//	//uint8_t *p_hash = new uint8_t[32];
+//	//uint32_t src_len = { 14 };
+//	//
+//	////printf((char *)p_src);
+//
+//	//ret = ecall_sgx_sha256_msg(global_eid, p_src, 256);
+//	//if (ret != SGX_SUCCESS)
+//	//	abort();
+//
+//
+//	//std::string s;
+//
+//	//s.assign(p_hash, p_hash + sizeof(p_hash));
+//	char msg[MAX_MSG_LEN] = { 0 };
+//	char out[MAX_MSG_LEN] = { 0 };
+//	sgx_launch_token_t token = { 0 };
+//	sgx_status_t status;
+////	sgx_status_t enclave_error;
+//	sgx_enclave_id_t eid = 0;
+//	int updated = 0;
+//	int rv;
+//	int iSGXCapable = 0;
+//
+//	// = sgx_create_enclavew(ENCLAVE_PATH, SGX_DEBUG_FLAG, &token, &updated, &eid, 0);
+//	//if (status != SGX_SUCCESS) { fprintf(stderr, "sgx_create_enclave: 0x%08x\n", status); Exit(1); }
+//
+//
+//
+//
+//
+//	strncpy_s(msg, "password", 80);
+//
+//	status = store_secret(eid, msg);
+//
+//	/* Delete the secret from untrusted memory right away */
+//	SecureZeroMemory(msg, MAX_MSG_LEN);
+//
+//	if (status != SGX_SUCCESS) { fprintf(stderr, "ECALL: store_secret: 0x%08x\n", status); Exit(1); }
+//
+//	//ocall_print_secret(out);
+//
+//	//status = ecall_print_hash(eid, &rv, &enclave_error);
+//
+//	get_secret(eid);
+//
+//	print_hash(eid, &rv);
+//
+//	if (status != SGX_SUCCESS) { fprintf(stderr, "ECALL: print_hash: 0x%08x\n", status); Exit(1); }
+//
+//	// Now check the return value of the function executed in the ECALL
+//	//if (rv == ERR_HASH) { fprintf(stderr, "Couldn't calculate hash: 0x%08x\n", enclave_error); Exit(1); }
+//	//else if (rv == ERR_OCALL) { fprintf(stderr, "OCALL: o_print_hash: 0x%08x\n", enclave_error); Exit(1); }
+//
+//
+//
+//
+//}
+
+//void Exit(int code)
+//{
+//	printf("Press ENTER to exit...\n");
+//	fflush(stdout);
+//	getchar();
+//	exit(code);
+//}
