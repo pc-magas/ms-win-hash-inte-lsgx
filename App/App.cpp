@@ -338,9 +338,61 @@ int query_sgx_status()
 #pragma comment (lib, "sgx_capable")
 
 void Exit(int);
+void RunSha256();
+void RunAesEncryption();
 
 int main()
 {
+	//RunSha256();
+	RunAesEncryption();
+}
+
+#define ENCRYPTION_MSG_LEN 65536
+
+void RunAesEncryption() {
+	char privateKey[ENCRYPTION_MSG_LEN] = { 0 };
+	char unencryptedText[ENCRYPTION_MSG_LEN] = { 0 };
+	char incrementCounter[ENCRYPTION_MSG_LEN] = { 0 };
+	char out[MAX_MSG_LEN] = { 0 };
+	sgx_launch_token_t token = { 0 };
+	sgx_status_t status, enclave_error;
+	sgx_enclave_id_t eid = 0;
+	int updated = 0;
+	int rv;
+	int iSGXCapable = 0;
+
+	sgx_is_capable(&iSGXCapable);
+	//if (iSGXCapable == 0) { MessageBox(0, L"sgx_is_capable == FALSE", L"", 0); Exit(0); }
+
+	status = sgx_create_enclavew(ENCLAVE_PATH, SGX_DEBUG_FLAG, &token, &updated, &eid, 0);
+	if (status != SGX_SUCCESS) { fprintf(stderr, "sgx_create_enclave: 0x%08x\n", status); Exit(1); }
+
+	strncpy_s(privateKey, "572C0706E51A9195", ENCRYPTION_MSG_LEN);
+	strncpy_s(unencryptedText, "ante geia", ENCRYPTION_MSG_LEN);
+	strncpy_s(incrementCounter, "572C0706E51A9195", ENCRYPTION_MSG_LEN);
+
+	status = store_encryption_data(eid, privateKey, unencryptedText,incrementCounter );
+
+	/* Delete the secret from untrusted memory right away */
+	//SecureZeroMemory(msg, MAX_MSG_LEN);
+
+	if (status != SGX_SUCCESS) { fprintf(stderr, "ECALL: store_encryption_data: 0x%08x\n", status); Exit(1); }
+
+	ocall_print_secret(out);
+
+	status = print_encrypted_text(eid, &rv, &enclave_error);
+	if (status != SGX_SUCCESS) { fprintf(stderr, "ECALL: print_encrypted_text: 0x%08x\n", status); Exit(1); }
+
+	// Now check the return value of the function executed in the ECALL
+	if (rv == -1) { fprintf(stderr, "Couldn't calculate encrypted text: 0x%08x\n", enclave_error); Exit(1); }
+	else if (rv == -2) { fprintf(stderr, "OCALL: o_print_text: 0x%08x\n", enclave_error); Exit(1); }
+
+
+	Exit(0);
+}
+
+
+void RunSha256() {
 	char msg[MAX_MSG_LEN] = { 0 };
 	char out[MAX_MSG_LEN] = { 0 };
 	sgx_launch_token_t token = { 0 };
@@ -397,6 +449,15 @@ void o_print_hash(unsigned char hash[32])
 		"  http://www.xorbin.com/tools/sha256-hash-calculator\n"
 		"\n(Don't forget to include the trailing newline!)"
 	);
+}
+
+void o_print_encrypted_text(unsigned char hash[32])
+{
+	int i;
+
+	printf("\nEncrypted text of the source input (including the newline) is:\n");
+	for (i = 0; i < 32; ++i) printf("%02x", hash[i]);
+	printf("\n\n");
 }
 
 void Exit(int code)

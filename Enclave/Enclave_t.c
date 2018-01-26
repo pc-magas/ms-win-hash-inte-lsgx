@@ -128,6 +128,17 @@ typedef struct ms_print_hash_t {
 	sgx_status_t* ms_error;
 } ms_print_hash_t;
 
+typedef struct ms_store_encryption_data_t {
+	char* ms_p_key;
+	char* ms_src;
+	char* ms_ctr;
+} ms_store_encryption_data_t;
+
+typedef struct ms_print_encrypted_text_t {
+	int ms_retval;
+	sgx_status_t* ms_error;
+} ms_print_encrypted_text_t;
+
 typedef struct ms_ecall_increase_counter_t {
 	size_t ms_retval;
 } ms_ecall_increase_counter_t;
@@ -163,6 +174,10 @@ typedef struct ms_memccpy_t {
 typedef struct ms_o_print_hash_t {
 	unsigned char* ms_hash;
 } ms_o_print_hash_t;
+
+typedef struct ms_o_print_encrypted_text_t {
+	unsigned char* ms_hash;
+} ms_o_print_encrypted_text_t;
 
 typedef struct ms_ocall_print_secret_t {
 	char* ms_str;
@@ -813,6 +828,101 @@ static sgx_status_t SGX_CDECL sgx_get_secret(void* pms)
 	return status;
 }
 
+static sgx_status_t SGX_CDECL sgx_store_encryption_data(void* pms)
+{
+	CHECK_REF_POINTER(pms, sizeof(ms_store_encryption_data_t));
+	ms_store_encryption_data_t* ms = SGX_CAST(ms_store_encryption_data_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	char* _tmp_p_key = ms->ms_p_key;
+	size_t _len_p_key = _tmp_p_key ? strlen(_tmp_p_key) + 1 : 0;
+	char* _in_p_key = NULL;
+	char* _tmp_src = ms->ms_src;
+	size_t _len_src = _tmp_src ? strlen(_tmp_src) + 1 : 0;
+	char* _in_src = NULL;
+	char* _tmp_ctr = ms->ms_ctr;
+	size_t _len_ctr = _tmp_ctr ? strlen(_tmp_ctr) + 1 : 0;
+	char* _in_ctr = NULL;
+
+	CHECK_UNIQUE_POINTER(_tmp_p_key, _len_p_key);
+	CHECK_UNIQUE_POINTER(_tmp_src, _len_src);
+	CHECK_UNIQUE_POINTER(_tmp_ctr, _len_ctr);
+
+	if (_tmp_p_key != NULL && _len_p_key != 0) {
+		_in_p_key = (char*)malloc(_len_p_key);
+		if (_in_p_key == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_p_key, _tmp_p_key, _len_p_key);
+		_in_p_key[_len_p_key - 1] = '\0';
+	}
+	if (_tmp_src != NULL && _len_src != 0) {
+		_in_src = (char*)malloc(_len_src);
+		if (_in_src == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_src, _tmp_src, _len_src);
+		_in_src[_len_src - 1] = '\0';
+	}
+	if (_tmp_ctr != NULL && _len_ctr != 0) {
+		_in_ctr = (char*)malloc(_len_ctr);
+		if (_in_ctr == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_ctr, _tmp_ctr, _len_ctr);
+		_in_ctr[_len_ctr - 1] = '\0';
+	}
+	store_encryption_data(_in_p_key, _in_src, _in_ctr);
+err:
+	if (_in_p_key) free(_in_p_key);
+	if (_in_src) free(_in_src);
+	if (_in_ctr) free(_in_ctr);
+
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_print_encrypted_text(void* pms)
+{
+	CHECK_REF_POINTER(pms, sizeof(ms_print_encrypted_text_t));
+	ms_print_encrypted_text_t* ms = SGX_CAST(ms_print_encrypted_text_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	sgx_status_t* _tmp_error = ms->ms_error;
+	size_t _len_error = sizeof(*_tmp_error);
+	sgx_status_t* _in_error = NULL;
+
+	CHECK_UNIQUE_POINTER(_tmp_error, _len_error);
+
+	if (_tmp_error != NULL && _len_error != 0) {
+		if ((_in_error = (sgx_status_t*)malloc(_len_error)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_error, 0, _len_error);
+	}
+	ms->ms_retval = print_encrypted_text(_in_error);
+err:
+	if (_in_error) {
+		memcpy(_tmp_error, _in_error, _len_error);
+		free(_in_error);
+	}
+
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_get_encrypted_text(void* pms)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
+	get_encrypted_text();
+	return status;
+}
+
 static sgx_status_t SGX_CDECL sgx_ecall_exception(void* pms)
 {
 	sgx_status_t status = SGX_SUCCESS;
@@ -860,9 +970,9 @@ static sgx_status_t SGX_CDECL sgx_ecall_consumer(void* pms)
 
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* call_addr; uint8_t is_priv;} ecall_table[35];
+	struct {void* call_addr; uint8_t is_priv;} ecall_table[38];
 } g_ecall_table = {
-	35,
+	38,
 	{
 		{(void*)(uintptr_t)sgx_ecall_type_char, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_int, 0},
@@ -894,6 +1004,9 @@ SGX_EXTERNC const struct {
 		{(void*)(uintptr_t)sgx_store_secret, 0},
 		{(void*)(uintptr_t)sgx_print_hash, 0},
 		{(void*)(uintptr_t)sgx_get_secret, 0},
+		{(void*)(uintptr_t)sgx_store_encryption_data, 0},
+		{(void*)(uintptr_t)sgx_print_encrypted_text, 0},
+		{(void*)(uintptr_t)sgx_get_encrypted_text, 0},
 		{(void*)(uintptr_t)sgx_ecall_exception, 0},
 		{(void*)(uintptr_t)sgx_ecall_map, 0},
 		{(void*)(uintptr_t)sgx_ecall_increase_counter, 0},
@@ -904,24 +1017,25 @@ SGX_EXTERNC const struct {
 
 SGX_EXTERNC const struct {
 	size_t nr_ocall;
-	uint8_t entry_table[14][35];
+	uint8_t entry_table[15][38];
 } g_dyn_entry_table = {
-	14,
+	15,
 	{
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
 	}
 };
 
@@ -1200,10 +1314,47 @@ sgx_status_t SGX_CDECL o_print_hash(unsigned char hash[32])
 	return status;
 }
 
+sgx_status_t SGX_CDECL o_print_encrypted_text(unsigned char hash[32])
+{
+	sgx_status_t status = SGX_SUCCESS;
+	size_t _len_hash = 32 * sizeof(*hash);
+
+	ms_o_print_encrypted_text_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_o_print_encrypted_text_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (hash != NULL && sgx_is_within_enclave(hash, _len_hash)) ? _len_hash : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_o_print_encrypted_text_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_o_print_encrypted_text_t));
+
+	if (hash != NULL && sgx_is_within_enclave(hash, _len_hash)) {
+		ms->ms_hash = (unsigned char*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_hash);
+		memcpy(ms->ms_hash, hash, _len_hash);
+	} else if (hash == NULL) {
+		ms->ms_hash = NULL;
+	} else {
+		sgx_ocfree();
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	
+	status = sgx_ocall(8, ms);
+
+
+	sgx_ocfree();
+	return status;
+}
+
 sgx_status_t SGX_CDECL ocall_print_secret(const char* str)
 {
 	sgx_status_t status = SGX_SUCCESS;
-	size_t _len_str = str ? strlen(str) + 1 : 0;
+	size_t _len_str = sizeof(*str);
 
 	ms_ocall_print_secret_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_print_secret_t);
@@ -1230,7 +1381,7 @@ sgx_status_t SGX_CDECL ocall_print_secret(const char* str)
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	
-	status = sgx_ocall(8, ms);
+	status = sgx_ocall(9, ms);
 
 
 	sgx_ocfree();
@@ -1269,7 +1420,7 @@ sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf)
 	
 	ms->ms_leaf = leaf;
 	ms->ms_subleaf = subleaf;
-	status = sgx_ocall(9, ms);
+	status = sgx_ocall(10, ms);
 
 	if (cpuinfo) memcpy((void*)cpuinfo, ms->ms_cpuinfo, _len_cpuinfo);
 
@@ -1295,7 +1446,7 @@ sgx_status_t SGX_CDECL sgx_thread_wait_untrusted_event_ocall(int* retval, const 
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_wait_untrusted_event_ocall_t));
 
 	ms->ms_self = SGX_CAST(void*, self);
-	status = sgx_ocall(10, ms);
+	status = sgx_ocall(11, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -1321,7 +1472,7 @@ sgx_status_t SGX_CDECL sgx_thread_set_untrusted_event_ocall(int* retval, const v
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_set_untrusted_event_ocall_t));
 
 	ms->ms_waiter = SGX_CAST(void*, waiter);
-	status = sgx_ocall(11, ms);
+	status = sgx_ocall(12, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -1348,7 +1499,7 @@ sgx_status_t SGX_CDECL sgx_thread_setwait_untrusted_events_ocall(int* retval, co
 
 	ms->ms_waiter = SGX_CAST(void*, waiter);
 	ms->ms_self = SGX_CAST(void*, self);
-	status = sgx_ocall(12, ms);
+	status = sgx_ocall(13, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -1387,7 +1538,7 @@ sgx_status_t SGX_CDECL sgx_thread_set_multiple_untrusted_events_ocall(int* retva
 	}
 	
 	ms->ms_total = total;
-	status = sgx_ocall(13, ms);
+	status = sgx_ocall(14, ms);
 
 	if (retval) *retval = ms->ms_retval;
 

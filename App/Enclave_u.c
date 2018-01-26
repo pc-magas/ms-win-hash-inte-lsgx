@@ -112,6 +112,17 @@ typedef struct ms_print_hash_t {
 	sgx_status_t* ms_error;
 } ms_print_hash_t;
 
+typedef struct ms_store_encryption_data_t {
+	char* ms_p_key;
+	char* ms_src;
+	char* ms_ctr;
+} ms_store_encryption_data_t;
+
+typedef struct ms_print_encrypted_text_t {
+	int ms_retval;
+	sgx_status_t* ms_error;
+} ms_print_encrypted_text_t;
+
 typedef struct ms_ecall_increase_counter_t {
 	size_t ms_retval;
 } ms_ecall_increase_counter_t;
@@ -147,6 +158,10 @@ typedef struct ms_memccpy_t {
 typedef struct ms_o_print_hash_t {
 	unsigned char* ms_hash;
 } ms_o_print_hash_t;
+
+typedef struct ms_o_print_encrypted_text_t {
+	unsigned char* ms_hash;
+} ms_o_print_encrypted_text_t;
 
 typedef struct ms_ocall_print_secret_t {
 	char* ms_str;
@@ -243,6 +258,14 @@ static sgx_status_t SGX_CDECL Enclave_o_print_hash(void* pms)
 	return SGX_SUCCESS;
 }
 
+static sgx_status_t SGX_CDECL Enclave_o_print_encrypted_text(void* pms)
+{
+	ms_o_print_encrypted_text_t* ms = SGX_CAST(ms_o_print_encrypted_text_t*, pms);
+	o_print_encrypted_text(ms->ms_hash);
+
+	return SGX_SUCCESS;
+}
+
 static sgx_status_t SGX_CDECL Enclave_ocall_print_secret(void* pms)
 {
 	ms_ocall_print_secret_t* ms = SGX_CAST(ms_ocall_print_secret_t*, pms);
@@ -293,9 +316,9 @@ static sgx_status_t SGX_CDECL Enclave_sgx_thread_set_multiple_untrusted_events_o
 
 static const struct {
 	size_t nr_ocall;
-	void * func_addr[14];
+	void * func_addr[15];
 } ocall_table_Enclave = {
-	14,
+	15,
 	{
 		(void*)(uintptr_t)Enclave_ocall_print_string,
 		(void*)(uintptr_t)Enclave_ocall_pointer_user_check,
@@ -305,6 +328,7 @@ static const struct {
 		(void*)(uintptr_t)Enclave_memccpy,
 		(void*)(uintptr_t)Enclave_ocall_function_allow,
 		(void*)(uintptr_t)Enclave_o_print_hash,
+		(void*)(uintptr_t)Enclave_o_print_encrypted_text,
 		(void*)(uintptr_t)Enclave_ocall_print_secret,
 		(void*)(uintptr_t)Enclave_sgx_oc_cpuidex,
 		(void*)(uintptr_t)Enclave_sgx_thread_wait_untrusted_event_ocall,
@@ -583,17 +607,45 @@ sgx_status_t get_secret(sgx_enclave_id_t eid)
 	return status;
 }
 
+sgx_status_t store_encryption_data(sgx_enclave_id_t eid, char* p_key, char* src, char* ctr)
+{
+	sgx_status_t status;
+	ms_store_encryption_data_t ms;
+	ms.ms_p_key = p_key;
+	ms.ms_src = src;
+	ms.ms_ctr = ctr;
+	status = sgx_ecall(eid, 30, &ocall_table_Enclave, &ms);
+	return status;
+}
+
+sgx_status_t print_encrypted_text(sgx_enclave_id_t eid, int* retval, sgx_status_t* error)
+{
+	sgx_status_t status;
+	ms_print_encrypted_text_t ms;
+	ms.ms_error = error;
+	status = sgx_ecall(eid, 31, &ocall_table_Enclave, &ms);
+	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
+	return status;
+}
+
+sgx_status_t get_encrypted_text(sgx_enclave_id_t eid)
+{
+	sgx_status_t status;
+	status = sgx_ecall(eid, 32, &ocall_table_Enclave, NULL);
+	return status;
+}
+
 sgx_status_t ecall_exception(sgx_enclave_id_t eid)
 {
 	sgx_status_t status;
-	status = sgx_ecall(eid, 30, &ocall_table_Enclave, NULL);
+	status = sgx_ecall(eid, 33, &ocall_table_Enclave, NULL);
 	return status;
 }
 
 sgx_status_t ecall_map(sgx_enclave_id_t eid)
 {
 	sgx_status_t status;
-	status = sgx_ecall(eid, 31, &ocall_table_Enclave, NULL);
+	status = sgx_ecall(eid, 34, &ocall_table_Enclave, NULL);
 	return status;
 }
 
@@ -601,7 +653,7 @@ sgx_status_t ecall_increase_counter(sgx_enclave_id_t eid, size_t* retval)
 {
 	sgx_status_t status;
 	ms_ecall_increase_counter_t ms;
-	status = sgx_ecall(eid, 32, &ocall_table_Enclave, &ms);
+	status = sgx_ecall(eid, 35, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -609,14 +661,14 @@ sgx_status_t ecall_increase_counter(sgx_enclave_id_t eid, size_t* retval)
 sgx_status_t ecall_producer(sgx_enclave_id_t eid)
 {
 	sgx_status_t status;
-	status = sgx_ecall(eid, 33, &ocall_table_Enclave, NULL);
+	status = sgx_ecall(eid, 36, &ocall_table_Enclave, NULL);
 	return status;
 }
 
 sgx_status_t ecall_consumer(sgx_enclave_id_t eid)
 {
 	sgx_status_t status;
-	status = sgx_ecall(eid, 34, &ocall_table_Enclave, NULL);
+	status = sgx_ecall(eid, 37, &ocall_table_Enclave, NULL);
 	return status;
 }
 

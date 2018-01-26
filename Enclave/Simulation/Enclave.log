@@ -1,1 +1,15 @@
-﻿C:\Work\XenakisFinal\Enclave\Enclave.vcxproj : error MSB4057: The target "Deploy" does not exist in the project.
+﻿  Libc.cpp
+  Enclave.vcxproj -> C:\Work\XenakisFinal\Simulation\Enclave.dll
+  The required memory is 0x4af000.
+  Succeed.
+  <EnclaveConfiguration>
+      <ProdID>0</ProdID>
+      <ISVSVN>0</ISVSVN>
+      <StackMaxSize>0x40000</StackMaxSize>
+      <HeapMaxSize>0x100000</HeapMaxSize>
+      <TCSNum>10</TCSNum>
+      <TCSPolicy>1</TCSPolicy>
+      <DisableDebug>0</DisableDebug>
+      <MiscSelect>0</MiscSelect>
+      <MiscMask>0xFFFFFFFF</MiscMask>
+  </EnclaveConfiguration>

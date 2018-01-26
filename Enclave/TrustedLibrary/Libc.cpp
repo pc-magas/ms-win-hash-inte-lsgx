@@ -53,53 +53,15 @@ void ecall_sgx_cpuid(int cpuinfo[4], int leaf)
 		abort();
 }
 
-void ecall_sgx_sha256_msg(const uint8_t *p_src, uint32_t src_len)
-{
-
-	printf("AAAAAAAAAAAAAAAAA\n");
-	sgx_sha256_hash_t *result = new sgx_sha256_hash_t[32];
-
-	sgx_status_t ret = sgx_sha256_msg(p_src, src_len, result);
-	if (ret != SGX_SUCCESS)
-		abort();
-
-
-	printf("----------------------------Hash Result as %s: ----------------------------\n");
-	printf((char *)result[0]);
-	printf("\n");
-	printf("----------------------------End of Result as %s: ----------------------------\n");
-
-
-
-	printf("----------------------------Hash Result as char array: ----------------------------\n");
-	printf((char *)result);
-	printf("\n");
-	printf("----------------------------End of Hash Result as char array: ----------------------------\n");
-	printf("BBBBBBBBBBBBBBBBB\n");
-
-
-
-	printf("----------------------------Hash Result as hex array: ----------------------------\n");
-	for (int i = 0; i < 32; i++) {
-		printf("%#x, ", (int)&result[i]);
-	}
-	printf("\n");
-	printf("----------------------------End of Hash Result as hex array: ----------------------------\n");
-
-}
-
 char secret[MAX_MSG_LEN];
-
 void store_secret(char *s)
 {
 	strncpy(secret, s, 80);
 }
-
 void get_secret()
 {
 	ocall_print_secret(secret);
 }
-
 int print_hash(sgx_status_t *error)
 {
 	sgx_sha256_hash_t hash;
@@ -111,4 +73,38 @@ int print_hash(sgx_status_t *error)
 	if (*error != SGX_SUCCESS) return -2;
 
 	return 0;
+}
+
+#define BIT_SIZE_KEY 128
+char encryptionKey[BIT_SIZE_KEY];
+char unencryptedText[MAX_MSG_LEN];
+char incrementalCounter[BIT_SIZE_KEY];
+
+void store_encryption_data(char *p_key, char *src, char *ctr) {
+	strncpy(encryptionKey, p_key, BIT_SIZE_KEY);
+	strncpy(unencryptedText, src, MAX_MSG_LEN);
+	strncpy(incrementalCounter, ctr, BIT_SIZE_KEY);
+}
+
+int print_encrypted_text(sgx_status_t *error) {
+
+	uint8_t result;// = new uint8_t[MAX_MSG_LEN];
+
+	*error = sgx_aes_ctr_encrypt(
+		(sgx_aes_ctr_128bit_key_t *)"1",
+		(uint8_t *)"1234123412341234",
+		16,
+		(uint8_t *)"1234123412341234",
+		65536,
+		&result);
+	if (*error != SGX_SUCCESS) return -1;
+
+	o_print_encrypted_text((unsigned char *)result);
+	if (*error != SGX_SUCCESS) return -2;
+
+	return 0;
+}
+
+void get_encrypted_text() {
+	ocall_print_secret(unencryptedText);
 }

@@ -14,11 +14,15 @@ enclave {
 		public int print_hash([out] sgx_status_t *error);  
 		public void get_secret();
 
+		public void store_encryption_data([in, string] char *p_key,[in, string] char *src,[in, string] char *ctr);
+		public int print_encrypted_text([out] sgx_status_t *error);  
+		public void get_encrypted_text();
     };
 
 
     untrusted {
 		void o_print_hash([in] unsigned char hash[32]);    
-		void ocall_print_secret([in, string] const char *str);
+		void o_print_encrypted_text([in] unsigned char hash[32]);    
+		void ocall_print_secret([in] const char *str);
     };
 };
